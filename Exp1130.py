@@ -24,13 +24,6 @@ def extract_features(eid,tree,label):
 
     return tree_dict
 
-def write_infos_to_file(path,infos,eid,label):
-    with codecs.open(path,'a+',encoding='utf-8') as info_file:
-        info_file.write(eid+'\t')
-        infos_list = [info[key] for info in infos for key in info]
-        for info in infos_list:
-            info_file.write(str(info)+'\t')
-        info_file.write(label+'\n')
 def getTP(predictions,input_y):
     count = 0
     for pre, real in zip(predictions,input_y):
@@ -102,9 +95,6 @@ def classify(X,y,method='svm'):
         f1_score += res['f1']
     print(accuracy/5,precision/5,recall/5,f1_score/5)
 
-
-
-
 def get_dataset(path):
     pd_data = pd.read_csv(path, sep='\t', header=None)
     wb_data = pd_data.as_matrix()
@@ -149,69 +139,100 @@ def get_z_score(data):
 
     return score_array
 
+
+#根据参数类型计算传播树结构各层节点个数的平均值
+def cal_node_level_count(type):
+
+    data = pd.read_csv('D:/chenjiao/SinaWeibo/datasets2/Weibo.txt', sep='\t', header=None)
+    if type=='fake':
+        data = data.loc[data[1]=='label:1']
+    elif type == 'real':
+        data = data.loc[data[1] == 'label:0']
+
+    data_array = data.as_matrix()
+
+    tree_dict_list = []
+    max_depth = 0
+    all_infos = []
+    for i in range(data_array.shape[0]):
+        eid = str(data_array[i][0]).replace('eid:', '')
+        label = str(data_array[i][1].replace('label:', ''))
+        load_f = open('D:/chenjiao/SinaWeibo/datasets2/Weibo/{}.json'.format(eid), 'r', encoding='utf-8')
+        json_data = json.load(load_f)
+        print('-----',eid)
+        tree = Tree()
+        tree.create_node(json_data[0].get("mid"),json_data[0].get("mid"))
+
+        for j in range(1,len(json_data)):
+            try:
+                tree.create_node(json_data[j].get("mid"),json_data[j].get("mid"),parent=json_data[j].get("parent"))
+            except:
+                pass
+        # tree.show()
+
+        tree_depth = tree.depth()
+        if tree_depth > max_depth:
+            max_depth = tree_depth
+
+        #统计各层节点个数
+        tree_dict = {}
+        for node in tree.all_nodes_itr():
+            level = tree.depth(node=node)
+            if level not in tree_dict:
+                tree_dict[level] = 1
+            else:
+                tree_dict[level] += 1
+        #统计完
+
+        tree_dict_list.append(tree_dict)
+
+    tree_levels_count_list = {}
+    for dict in tree_dict_list:
+        for i in range(max_depth+1):
+            if i in dict:
+                if i in tree_levels_count_list:
+                    tree_levels_count_list[i] += dict[i]
+                else:
+                    tree_levels_count_list[i] = dict[i]
+
+    print(tree_levels_count_list)
+
+    for key in tree_levels_count_list:
+        print(key,tree_levels_count_list[key]/data_array.shape[0])
+
+
 if __name__ == "__main__":
-    # data = pd.read_csv('D:/chenjiao/SinaWeibo/datasets2/Weibo.txt', sep='\t', header=None)
-    # # data2 = data.loc[data[1]=='label:1']
-    # data_array = data.as_matrix()
-    #
-    # tree_dict_list = []
-    # max_depth = 0
-    # all_infos = []
-    # for i in range(data_array.shape[0]):
-    #     eid = str(data_array[i][0]).replace('eid:', '')
-    #     label = str(data_array[i][1].replace('label:', ''))
-    #     load_f = open('D:/chenjiao/SinaWeibo/datasets2/Weibo/{}.json'.format(eid), 'r', encoding='utf-8')
-    #     json_data = json.load(load_f)
-    #     print('-----',eid)
-    #     tree = Tree()
-    #     tree.create_node(json_data[0].get("mid"),json_data[0].get("mid"))
-    #
-    #     for j in range(1,len(json_data)):
-    #         try:
-    #             tree.create_node(json_data[j].get("mid"),json_data[j].get("mid"),parent=json_data[j].get("parent"))
-    #         except:
-    #             pass
-    #     # tree.show()
-    #
-    #     tree_dict = extract_features(eid,tree,label)
-    #     write_infos_to_file('./Features/features1.txt',tree_dict,eid,label)
+    data = pd.read_csv('D:/chenjiao/SinaWeibo/datasets2/Weibo.txt', sep='\t', header=None)
+    data_array = data.as_matrix()
 
-    data = pd.read_csv('./Features/features1.txt',header=None,sep='\t').as_matrix()
-    # data = pd.read_csv('D:/chenjiao/pythonPro/dataHelper/datas13_z1.txt',header=None,sep='\t').as_matrix()
-    zscores = get_z_score(data)
-    X= zscores[:,1:-1]
-    y =zscores[:,-1]
-    classify(X,y,'logic_regresion')
 
-    #     tree_depth = tree.depth()
-    #     if tree_depth > max_depth:
-    #         max_depth = tree_depth
-    #
-    #     #统计各层节点个数
-    #     tree_dict = {}
-    #     for node in tree.all_nodes_itr():
-    #         level = tree.depth(node=node)
-    #         if level not in tree_dict:
-    #             tree_dict[level] = 1
-    #         else:
-    #             tree_dict[level] += 1
-    #     #统计完
-    #
-    #     tree_dict_list.append(tree_dict)
-    #
-    # tree_levels_count_list = {}
-    # for dict in tree_dict_list:
-    #     for i in range(max_depth+1):
-    #         if i in dict:
-    #             if i in tree_levels_count_list:
-    #                 tree_levels_count_list[i] += dict[i]
-    #             else:
-    #                 tree_levels_count_list[i] = dict[i]
-    #
-    # print(tree_levels_count_list)
-    #
-    # for key in tree_levels_count_list:
-    #     print(key,tree_levels_count_list[key]/data_array.shape[0])
+    for i in range(data_array.shape[0]):
+        eid = str(data_array[i][0]).replace('eid:', '')
+        label = str(data_array[i][1].replace('label:', ''))
+        load_f = open('D:/chenjiao/SinaWeibo/datasets2/Weibo/{}.json'.format(eid), 'r', encoding='utf-8')
+        json_data = json.load(load_f)
+        print('-----',eid)
+        tree = Tree()
+        tree.create_node(json_data[0].get("mid"),json_data[0].get("mid"))
+
+        for j in range(1,len(json_data)):
+            try:
+                tree.create_node(json_data[j].get("mid"),json_data[j].get("mid"),parent=json_data[j].get("parent"))
+            except:
+                pass
+        # tree.show()
+
+        tree_dict = extract_features(eid,tree,label)
+
+        # write_infos_to_file('./Features/features1.txt',tree_dict,eid,label)
+
+    # data = pd.read_csv('./Features/features1.txt',header=None,sep='\t').as_matrix()
+    # zscores = get_z_score(data)
+    # X= zscores[:,1:-1]
+    # y =zscores[:,-1]
+    # classify(X,y,'logic_regresion')
+
+
 
 
 
