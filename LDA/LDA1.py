@@ -20,18 +20,22 @@ exclude = set(string.punctuation)
 lemma = WordNetLemmatizer()
 def clean(doc):
     # stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
-    punc_free = ''.join(ch for ch in doc if ch not in exclude)
+    punc_free = ''.join(ch for ch in doc.lower() if ch not in exclude)
     normalized = " ".join(lemma.lemmatize(word) for word in punc_free.split())
     return normalized
 
 
 doc_clean = [clean(doc).split() for doc in doc_complete]
+print('doc_clean:',doc_clean)
 
 # 创建语料的词语词典，每个单独的词语都会被赋予一个索引
 dictionary = corpora.Dictionary(doc_clean)
+print('dictionary：',dictionary)
+print(dictionary.token2id)
+# print(dictionary.doc2bow(doc_clean[0]))
 #  使用上面的词典，将转换文档列表（语料）变成 DT 矩阵
 doc_term_matrix = [dictionary.doc2bow(doc) for doc in doc_clean]
-
+print(doc_term_matrix)
 # 使用 gensim 来创建 LDA 模型对象
 Lda = gensim.models.ldamodel.LdaModel
 
